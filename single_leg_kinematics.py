@@ -24,8 +24,12 @@ class kinematics():
         self.phi = radians(90)
         
         # body dimensions
-        self.length = 0.25205
-        self.width = 0.105577
+        # self.length = 0.25205
+        # self.width = 0.105577
+        # self.hight = 0.0
+
+        self.length = 0.0
+        self.width = 0.0
         self.hight = 0.0
         
         # leg origins (left_f, left_b, right_b, right_f), i.e., the coordinate of j1
@@ -182,7 +186,7 @@ class kinematics():
         # self.plot_base(ax,rot, is_radians, center_offset)  # plot base
 
         # plot single leg
-        self.plot_leg(ax,xyz[leg_id],rot,leg_id, is_radians, center_offset) 
+        self.plot_leg(ax,xyz, rot, leg_id, is_radians, center_offset) 
 
         # for leg in range(leg_N):
         #     self.plot_leg(ax,xyz[leg],rot,leg, is_radians, center_offset) 
