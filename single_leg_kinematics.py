@@ -164,7 +164,7 @@ class kinematics():
         p = ((self.leg_pose(xyz, rot, legID, is_radians, center_offset) \
                 + self.base_pose(rot,is_radians,center_offset)[legID]).transpose())
         # plot coordinates
-        ax.plot3D(asarray(p[0,:]).flatten(), asarray(p[1,:]).flatten(), asarray(p[2,:]).flatten(), 'b')
+        ax.plot3D(asarray(p[0,:]).flatten(), asarray(p[1,:]).flatten(), asarray(p[2,:]).flatten(), 'b', linewidth=3)
         return
 
     def plot_robot(self, xyz, rot=[0,0,0], leg_N=4, is_radians=True, limit=0.250, center_offset=[0,0,0]):
