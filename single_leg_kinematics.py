@@ -6,7 +6,7 @@ from math import *
 import matplotlib.pyplot as plt
 from util import RotMatrix3D, point_to_rad
 
-class kinematics():
+class single_leg_kinematics():
     
     def __init__(self):
         
@@ -18,26 +18,23 @@ class kinematics():
         
         self.right_legs = [right_front, right_back]
         
-        self.link_1 = 0.045
-        self.link_2 = 0.1115
-        self.link_3 = 0.155
+        self.L1 = 0.045
+        self.L2 = 0.1115
+        self.L3 = 0.155
         self.phi = radians(90)
         
         # body dimensions
         # self.length = 0.25205
         # self.width = 0.105577
-        # self.hight = 0.0
-
-        self.length = 0.0
-        self.width = 0.0
-        self.hight = 0.0
+        # self.height = 0.0
         
         # leg origins (left_f, left_b, right_b, right_f), i.e., the coordinate of j1
-        self.leg_origins = np.matrix([[self.length/2, self.width/2, 0],
-                          [-self.length/2, self.width/2, 0],
-                          [-self.length/2, -self.width/2, 0],
-                          [self.length/2, -self.width/2, 0],
-                          [self.length/2, self.width/2, 0]])
+        # self.leg_origins = np.matrix([[self.length/2, self.width/2, 0],
+        #                   [-self.length/2, self.width/2, 0],
+        #                   [-self.length/2, -self.width/2, 0],
+        #                   [self.length/2, -self.width/2, 0],
+        #                   [self.length/2, self.width/2, 0]])
+        self.single_leg_origin = [0, 0, 0]
         
     # this method adjust inputs to the IK calculator by adding rotation and 
     # offset of that rotation from the center of the robot
@@ -52,7 +49,7 @@ class kinematics():
         
         # subtract the offset between the leg and the center of rotation 
         # so that the resultant coordiante is relative to the origin (j1) of the leg
-        xyz_ = asarray(XYZ - self.leg_origins[legID,:] + array(center_offset)).flatten()
+        xyz_ = asarray(XYZ - self.leg_origin + array(center_offset)).flatten()
 
         # calculate the angles and coordinates of the leg relative to the origin of the leg
         return self.leg_IK_calc(xyz_, is_right)
@@ -70,7 +67,7 @@ class kinematics():
         # a_2 : angle bewtween len_A and leg's projection line on YZ plane
         # a_3 : angle between link1 and length len_A
         a_1 = point_to_rad(y,z)                     
-        a_2 = asin(sin(self.phi)*self.link_1/len_A) 
+        a_2 = asin(sin(self.phi)*self.L1/len_A) 
         a_3 = pi - a_2 - self.phi                   
         
         # angle of link1 about the x-axis 
@@ -79,7 +76,7 @@ class kinematics():
             theta_1 = a_1 + a_3
             if theta_1 >= 2*pi: theta_1 -= 2*pi
         
-        j2 = array([0,self.link_1*cos(theta_1),self.link_1*sin(theta_1)])
+        j2 = array([0,self.L1*cos(theta_1),self.L1*sin(theta_1)])
         j4 = array(xyz)
         j4_2_vec = j4 - j2 # vector from j2 to j4
         
@@ -90,23 +87,23 @@ class kinematics():
         rot_mtx = RotMatrix3D([-R,0,0],is_radians=True)
         j4_2_vec_ = rot_mtx * (np.reshape(j4_2_vec,[3,1]))
         
-        # xyz in the rotated coordinate system + offset due to link_1 removed
+        # xyz in the rotated coordinate system + offset due to L1 removed
         x_, y_, z_ = j4_2_vec_[0], j4_2_vec_[1], j4_2_vec_[2]
         
         len_B = norm([x_, z_]) # norm(j4-j2)
         
         # handling mathematically invalid input, i.e., point too far away to reach
-        if len_B >= (self.link_2 + self.link_3): 
-            len_B = (self.link_2 + self.link_3) * 0.99999
+        if len_B >= (self.L2 + self.L3): 
+            len_B = (self.L2 + self.L3) * 0.99999
             # self.node.get_logger().warn('target coordinate: [%f %f %f] too far away' % (x, y, z))
             print('target coordinate: [%f %f %f] too far away' % (x, y, z))
         
         # b_1 : angle between +ve x-axis and len_B (0 <= b_1 < 2pi)
-        # b_2 : angle between len_B and link_2
-        # b_3 : angle between link_2 and link_3
+        # b_2 : angle between len_B and L2
+        # b_3 : angle between L2 and L3
         b_1 = point_to_rad(x_, z_)  
-        b_2 = acos((self.link_2**2 + len_B**2 - self.link_3**2) / (2 * self.link_2 * len_B)) 
-        b_3 = acos((self.link_2**2 + self.link_3**2 - len_B**2) / (2 * self.link_2 * self.link_3))  
+        b_2 = acos((self.L2**2 + len_B**2 - self.L3**2) / (2 * self.L2 * len_B)) 
+        b_3 = acos((self.L2**2 + self.L3**2 - len_B**2) / (2 * self.L2 * self.L3))  
         
         # assuming theta_2 = 0 when the leg is pointing down (i.e., 270 degrees offset from the +ve x-axis)
         theta_2 = b_1 - b_2    
@@ -116,11 +113,11 @@ class kinematics():
         j1 = np.array([0,0,0])
         
         # calculate joint 3
-        j3_ = np.reshape(np.array([self.link_2*cos(theta_2),0, self.link_2*sin(theta_2)]),[3,1])
+        j3_ = np.reshape(np.array([self.L2*cos(theta_2),0, self.L2*sin(theta_2)]),[3,1])
         j3 = np.asarray(j2 + np.reshape(np.linalg.inv(rot_mtx)*j3_, [1,3])).flatten()
         
         # calculate joint 4
-        j4_ = j3_ + np.reshape(np.array([self.link_3*cos(theta_2+theta_3),0, self.link_3*sin(theta_2+theta_3)]), [3,1])
+        j4_ = j3_ + np.reshape(np.array([self.L3*cos(theta_2+theta_3),0, self.L3*sin(theta_2+theta_3)]), [3,1])
         j4 = np.asarray(j2 + np.reshape(np.linalg.inv(rot_mtx)*j4_, [1,3])).flatten()
         
         # modify angles to match robot's configuration (i.e., adding offsets)
@@ -137,17 +134,22 @@ class kinematics():
         
         # rotate the base around the center of rotation (if there is no offset, then the center of 
         # rotation will be at the center of the robot)
-        rotated_base = RotMatrix3D(rot, is_radians) * self.leg_origins.transpose() - offset
+        rotated_base = RotMatrix3D(rot, is_radians) * self.leg_origin.transpose() - offset
         return rotated_base.transpose()
        
     # get coordinates of leg joints relative to j1
     def leg_pose(self, xyz, rot, legID, is_radians, center_offset=[0,0,0]):
+
+        # check is the leg is from the right side 
+        is_right = (legID in self.right_legs)
         
         # get the coordinates of each joints relative to the leg's origin
-        pose_relative = self.leg_IK(xyz, rot, legID, is_radians, center_offset)[3:]
+        # pose_relative = self.leg_IK(xyz, rot, legID, is_radians, center_offset)[3:]
+        pose_relative = self.leg_IK_calc(xyz, is_right)[3:]
         
         # adjust the coordinates according to the robot's orientation (roll, pitch, yaw)
-        pose_true = RotMatrix3D(rot,is_radians) * (array(pose_relative).transpose())
+        # pose_true = RotMatrix3D(rot,is_radians) * (array(pose_relative).transpose())
+        pose_true = array(pose_relative)
         return pose_true.transpose()
     
     # plot rectangular base where each corner represents the origin of leg
@@ -161,10 +163,23 @@ class kinematics():
     # plot leg 
     def plot_leg(self, ax, xyz, rot=[0,0,0], legID=0, is_radians=True, center_offset=[0,0,0]):
         # get coordinates
-        p = ((self.leg_pose(xyz, rot, legID, is_radians, center_offset) \
-                + self.base_pose(rot,is_radians,center_offset)[legID]).transpose())
+        # p = ((self.leg_pose(xyz, rot, legID, is_radians, center_offset) \
+        #         + self.base_pose(rot,is_radians,center_offset)[legID]).transpose())
+        
+        p = self.leg_pose(xyz, rot, legID, is_radians, center_offset)
         # plot coordinates
-        ax.plot3D(asarray(p[0,:]).flatten(), asarray(p[1,:]).flatten(), asarray(p[2,:]).flatten(), 'b', linewidth=3)
+        ax.plot3D(asarray(p[0,:]).flatten(), asarray(p[1,:]).flatten(), asarray(p[2,:]).flatten(), 'b')
+        return
+    
+    # plot single leg
+    def plot_single_leg(self, xyz, rot=[0,0,0], leg_id=2, is_radians=True, limit=0.250, center_offset=[0,0,0]):
+    
+        ax = self.ax_view(limit)  # set the view
+
+        self.plot_leg(ax,xyz,rot,leg_id, is_radians, center_offset) 
+        
+        # show figure
+        plt.show()
         return
 
     def plot_robot(self, xyz, rot=[0,0,0], leg_N=4, is_radians=True, limit=0.250, center_offset=[0,0,0]):
@@ -175,21 +190,6 @@ class kinematics():
         # plot legs
         for leg in range(leg_N):
             self.plot_leg(ax,xyz[leg],rot,leg, is_radians, center_offset) 
-        
-        # show figure
-        plt.show()
-        return
-
-    def plot_single_leg(self, xyz, rot=[0,0,0], leg_id=3, is_radians=True, limit=0.250, center_offset=[0,0,0]):
-    
-        ax = self.ax_view(limit)  # set the view
-        # self.plot_base(ax,rot, is_radians, center_offset)  # plot base
-
-        # plot single leg
-        self.plot_leg(ax,xyz, rot, leg_id, is_radians, center_offset) 
-
-        # for leg in range(leg_N):
-        #     self.plot_leg(ax,xyz[leg],rot,leg, is_radians, center_offset) 
         
         # show figure
         plt.show()
@@ -226,6 +226,8 @@ class kinematics():
         ax.set_ylabel("Y")
         ax.set_zlabel("Z")
         return ax
+
+
     
 
 
